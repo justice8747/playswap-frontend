@@ -1,14 +1,15 @@
 import asyncHandler from "express-async-handler";
 import client from "../database/connectDB.js";
-import { comparePassword } from "../model/HashPassword.js";
-import { generateAccessToken } from "../config/TokenGeneration.js";
+import { comparePassword } from "../utils/HashPassword.js";
+import { generateAccessToken } from "../utils/TokenGeneration.js";
+import CustomError from "../utils/CustomError.js";
 
-const loginUser = asyncHandler(async (req, res) => {
+const loginUser = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
 
   // Validate the input
   if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
+    return next(new CustomError("Email and password are required", 400));
   }
 
   // Check if the user exists
@@ -17,15 +18,16 @@ const loginUser = asyncHandler(async (req, res) => {
   ]);
 
   if (checkUser.rows.length === 0) {
-    return res.status(401).json({ message: "Invalide User Credentails" });
+    return next(new CustomError("Invalid User Credentials", 401));
   }
   //   compare password
   const comparedPassword = await comparePassword(
-    password,
+    req.body.password,
     checkUser.rows[0].password
   );
+  delete req.body.password;
   if (!comparedPassword) {
-    return res.status(401).json({ message: "Invalid User Credentials" });
+    return next(new CustomError("Invalid User Credentials", 401));
   }
 
   //   generate token
@@ -33,7 +35,12 @@ const loginUser = asyncHandler(async (req, res) => {
     id: checkUser.rows[0].id,
     email: checkUser.rows[0].email,
   });
-  res.setHeader("Authorization", `Bearer ${token}`);
+    res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
+  });
 
   delete checkUser.rows[0].password;
   delete checkUser.rows[0].created_at;

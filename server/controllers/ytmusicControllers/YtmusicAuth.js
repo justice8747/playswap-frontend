@@ -5,7 +5,7 @@ dotenv.config();
 export const ytmusicAuth = asyncHandler(async (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const redirectUri = process.env.YOUTUBE_REDIRECT_URI;
-  const scope = "https://www.googleapis.com/auth/youtube.readonly";
+  const scope = "https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/userinfo.profile";
 
   const authUrl =
     `https://accounts.google.com/o/oauth2/v2/auth?` +
