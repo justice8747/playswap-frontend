@@ -11,8 +11,10 @@ const ServiceCard = ({ serviceName, logoPath, isConnected, accountName }) => {
   const [loading, setLoading] = useState(false);
 
   const loadUser = async (service) => {
+    const backendUrl = (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:9000').replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    const apiUrl = (import.meta.env.VITE_API_BASE_URL || `${backendUrl}/api`).replace(/\/+$/, '');
     try {
-      const res = await fetch(`http://127.0.0.1:9000/api/me/${service}`, {
+      const res = await fetch(`${apiUrl}/me/${service}`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -45,6 +47,7 @@ const ServiceCard = ({ serviceName, logoPath, isConnected, accountName }) => {
   // Empty dependency array = Runs once on component mount
 
   const handleConnectionToggle = async () => {
+    const backendUrl = (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:9000').replace(/\/api\/?$/, '').replace(/\/+$/, '');
     setLoading(true);
     if (serviceName === 'spotify') {
       if (isSpotifyConnected) {
@@ -56,7 +59,7 @@ const ServiceCard = ({ serviceName, logoPath, isConnected, accountName }) => {
         return;
       }
 
-      window.location.href = 'http://127.0.0.1:9000/oauth2/authorization/spotify';
+      window.location.href = `${backendUrl}/oauth2/authorization/spotify`;
     }
 
     if (serviceName === 'ytmusic') {
@@ -69,7 +72,7 @@ const ServiceCard = ({ serviceName, logoPath, isConnected, accountName }) => {
         return;
       }
 
-      window.location.href = 'http://127.0.0.1:9000/oauth2/authorization/google';
+      window.location.href = `${backendUrl}/oauth2/authorization/google`;
     }
   };
 

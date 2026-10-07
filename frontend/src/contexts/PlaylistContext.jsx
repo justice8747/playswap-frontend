@@ -5,6 +5,13 @@ export const PlaylistContext = createContext();
 
 export const playlistReducer = (state, action) => {
   switch (action.type) {
+    case 'FETCH_PLAYLISTS_START':
+      return {
+        ...state,
+        playlists: null,
+        isLoading: true,
+        error: null,
+      };
     case 'FETCH_PLAYLISTS_SUCCESS':
       return {
         ...state,
@@ -15,6 +22,7 @@ export const playlistReducer = (state, action) => {
     case 'FETCH_PLAYLISTS_FAILURE':
       return {
         ...state,
+        playlists: null,
         isLoading: false,
         error: action.payload.error,
       };

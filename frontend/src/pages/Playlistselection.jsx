@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Check, Music } from 'lucide-react';
+import { ArrowLeft, Search, Check, Music, CloudCog } from 'lucide-react';
 import { ConnectionContext } from '../contexts/ConnectionContext.jsx';
 import { PlaylistContext } from '../contexts/PlaylistContext.jsx';
 import { useSearchParams } from 'react-router-dom';
@@ -27,20 +27,38 @@ const PlaylistSelection = () => {
   const analyzePlaylists = async (playlistsToAnalyze, sourceKey) => {
     setIsAnalyzingPlaylists(true); // Set local loading for analysis
     setAnalysisModalOpen(true); // Open modal to show loading state
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:9000/api').replace(/\/+$/, '');
+
+    const sourcePlatform = (sourceKey || source || 'spotify').toUpperCase() === 'SPOTIFY' ? 'SPOTIFY' : 'YTMUSIC';
+    const targetPlatform = sourcePlatform === 'SPOTIFY' ? 'YTMUSIC' : 'SPOTIFY';
+
+    const playlistIds = playlistsToAnalyze.map((p) => String(p.id));
+    const playlistNames = playlistsToAnalyze.reduce((acc, p) => {
+      acc[p.id] = p.name;
+      return acc;
+    }, {});
+
+    const requestPayload = {
+      sourcePlatform,
+      targetPlatform,
+      playlistIds,
+      playlistNames,
+    };
+
     try {
-      const res = await fetch(`http://localhost:3000/api/${sourceKey}/analyze/playlists`, {
+      const res = await fetch(`${baseUrl}/transfer/analyze`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(playlistsToAnalyze),
+        body: JSON.stringify(requestPayload),
       });
 
       if (res.ok) {
         const data = await res.json();
+        console.log('Analysis result:', data);
         setSessionId(data.sessionId);
 
-        let weightedMatchSum = 0;
-        const summary = {
+        let summary = {
           stats: {
             total_tracks: 0,
             ready_to_transfer: 0,
@@ -50,20 +68,44 @@ const PlaylistSelection = () => {
           missingTracks: [],
         };
 
-        for (const playlistAnalysis of data.analysis) {
-          summary.stats.total_tracks += playlistAnalysis.stats.total_tracks;
-          summary.stats.ready_to_transfer += playlistAnalysis.stats.ready_to_transfer;
-          summary.stats.failed_tracks += playlistAnalysis.stats.failed_tracks;
-          weightedMatchSum +=
-            playlistAnalysis.stats.match_percentage * playlistAnalysis.stats.total_tracks;
-          summary.missingTracks.push(...(playlistAnalysis.Missing_tracks || []));
+        if (Array.isArray(data)) {
+          let weightedMatchSum = 0;
+          for (const playlistAnalysis of data) {
+            const total = playlistAnalysis.stats?.total_tracks || playlistAnalysis.totalTracks || 0;
+            const ready = playlistAnalysis.stats?.ready_to_transfer || playlistAnalysis.matchedTracks || 0;
+            const failed = playlistAnalysis.stats?.failed_tracks || playlistAnalysis.unmatchedTracks || 0;
+            const matchPct = playlistAnalysis.stats?.match_percentage ?? (total > 0 ? (ready / total) * 100 : 0);
+
+            summary.stats.total_tracks += total;
+            summary.stats.ready_to_transfer += ready;
+            summary.stats.failed_tracks += failed;
+            weightedMatchSum += matchPct * total;
+            if (playlistAnalysis.Missing_tracks || playlistAnalysis.missingTracks) {
+              summary.missingTracks.push(...(playlistAnalysis.Missing_tracks || playlistAnalysis.missingTracks));
+            }
+          }
+          summary.stats.match_percentage = Math.round(
+            summary.stats.total_tracks === 0
+              ? 0
+              : Math.round(weightedMatchSum / summary.stats.total_tracks)
+          );
+        } else if (data && typeof data === 'object') {
+          const total = data.totalTracks ?? data.stats?.total_tracks ?? 0;
+          const ready = data.matchedTracks ?? data.stats?.ready_to_transfer ?? 0;
+          const failed = data.unmatchedTracks ?? data.stats?.failed_tracks ?? 0;
+          const matchPct = total > 0 ? Math.round((ready / total) * 100) : 0;
+
+          summary = {
+            stats: {
+              total_tracks: total,
+              ready_to_transfer: ready,
+              failed_tracks: failed,
+              match_percentage: matchPct,
+            },
+            missingTracks: data.missingTracks || data.Missing_tracks || [],
+          };
         }
 
-        summary.stats.match_percentage = Math.round(
-          summary.stats.total_tracks === 0
-            ? 0
-            : Math.round(weightedMatchSum / summary.stats.total_tracks)
-        );
         setAnalysisData(summary);
       } else {
         console.error('Error starting analysis:', res.statusText);
@@ -92,19 +134,28 @@ const PlaylistSelection = () => {
   };
 
   const getAllPlaylists = async () => {
-    // PlaylistContext's isLoading will handle the loading state
-    // dispatch({ type: 'FETCH_PLAYLISTS_START' }); // If a start action is desired
+    dispatch({ type: 'FETCH_PLAYLISTS_START' });
     const sourcekey = source === 'spotify' ? 'spotify' : 'ytmusic';
-    const res = await fetch(`http://127.0.0.1:9000/api/${sourcekey}/playlists`, {
-      method: 'GET',
-      credentials: 'include',
-    });
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api').replace(/\/+$/, '');
+    try {
+      const res = await fetch(`${baseUrl}/${sourcekey}/playlists`, {
+        method: 'GET',
+        credentials: 'include',
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      dispatch({ type: 'FETCH_PLAYLISTS_SUCCESS', payload: { playlists: data.playlists } });
-    } else {
-      console.error('Failed to fetch playlists');
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Fetched playlists:', data);
+        dispatch({ type: 'FETCH_PLAYLISTS_SUCCESS', payload: { playlists: data } });
+      } else {
+        console.error('Failed to fetch playlists');
+        dispatch({
+          type: 'FETCH_PLAYLISTS_FAILURE',
+          payload: { error: 'Failed to fetch playlists' },
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch playlists:', error);
       dispatch({
         type: 'FETCH_PLAYLISTS_FAILURE',
         payload: { error: 'Failed to fetch playlists' },
@@ -113,16 +164,17 @@ const PlaylistSelection = () => {
   };
 
   useEffect(() => {
-    dispatch({ type: 'CLEAR_PLAYLISTS' });
     if (source) {
-      // Use PlaylistContext's isLoading, remove local setLoading
+      dispatch({ type: 'FETCH_PLAYLISTS_START' });
       const timer = setTimeout(() => {
-        getAllPlaylists(); // No .finally(() => setLoading(false)) needed here
+        getAllPlaylists();
       }, 1000);
 
       return () => clearTimeout(timer);
+    } else {
+      dispatch({ type: 'CLEAR_PLAYLISTS' });
     }
-  }, [source, dispatch]); // Added dispatch to dependency array
+  }, [source, dispatch]);
 
   const filteredPlaylists = playlists?.filter((p) =>
     p.name?.toLowerCase().includes(searchTerm?.toLowerCase())
@@ -135,16 +187,16 @@ const PlaylistSelection = () => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === filteredPlaylists.length) {
+    if (selectedIds.length === filteredPlaylists?.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredPlaylists.map((p) => p.id));
+      setSelectedIds(filteredPlaylists?.map((p) => p.id) || []);
     }
   };
 
   const totalSelectedTracks = playlists
     ?.filter((p) => selectedIds.includes(p.id))
-    .reduce((sum, p) => sum + p.tracks, 0);
+    .reduce((sum, p) => sum + p.totalTracks, 0);
 
   const getTarget = () => {
     if (source === 'spotify') {
@@ -187,25 +239,33 @@ const PlaylistSelection = () => {
         </div>
 
         <div className="flex justify-between items-center mb-4">
-          <span className="text-sm text-gray-400">{filteredPlaylists?.length} Playlists found</span>
+          <span className="text-sm text-gray-400">
+            {isPlaylistsLoading
+              ? 'Loading playlists...'
+              : `${filteredPlaylists?.length || 0} Playlists found`}
+          </span>
           <button
             onClick={toggleSelectAll}
-            className="text-sm font-semibold text-[#1DB954] hover:text-[#1ed760] transition"
+            disabled={isPlaylistsLoading || !filteredPlaylists?.length}
+            className="text-sm font-semibold text-[#1DB954] hover:text-[#1ed760] transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {selectedIds.length === filteredPlaylists?.length ? 'Deselect All' : 'Select All'}
+            {selectedIds.length === (filteredPlaylists?.length || 0) && (filteredPlaylists?.length || 0) > 0
+              ? 'Deselect All'
+              : 'Select All'}
           </button>
         </div>
       </div>
 
       {/* Grid */}
       <main className="w-full max-w-4xl mx-auto flex-grow px-4 sm:px-6 pb-32">
-        {(isPlaylistsLoading || isAnalyzingPlaylists) && selectedIds.length === 0 ? ( // Use context loading for initial fetch
-          <div className="flex justify-center items-center py-20 w-full">
+        {isPlaylistsLoading ? (
+          <div className="flex flex-col justify-center items-center py-20 w-full gap-3">
             <LoadingSpinner />
+            <p className="text-gray-400 text-sm font-medium animate-pulse">Fetching your playlists...</p>
           </div>
-        ) : (
+        ) : filteredPlaylists && filteredPlaylists.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {filteredPlaylists?.map((playlist) => {
+            {filteredPlaylists.map((playlist) => {
               const isSelected = selectedIds.includes(playlist.id);
               return (
                 <div
@@ -220,7 +280,7 @@ const PlaylistSelection = () => {
                   {/* Image */}
                   <div className="relative w-16 h-16 flex-shrink-0 mr-4">
                     <img
-                      src={playlist.image}
+                      src={playlist.imageUrl}
                       alt={playlist.name}
                       className="w-full h-full rounded-lg object-cover"
                     />
@@ -238,7 +298,7 @@ const PlaylistSelection = () => {
                     </h3>
                     <div className="flex items-center text-xs text-gray-400 mt-1">
                       <Music size={12} className="mr-1" />
-                      {playlist.tracks} Tracks
+                      {playlist.totalTracks} Tracks
                     </div>
                   </div>
 
@@ -253,6 +313,10 @@ const PlaylistSelection = () => {
                 </div>
               );
             })}
+          </div>
+        ) : (
+          <div className="flex flex-col justify-center items-center py-20 text-gray-400">
+            <p className="text-base font-semibold">No playlists found</p>
           </div>
         )}
       </main>

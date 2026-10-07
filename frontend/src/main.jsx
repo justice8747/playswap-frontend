@@ -16,6 +16,8 @@ const TransferSuccess = lazy(() => import('./pages/TransferSuccess.jsx'));
 const TransfersHistory = lazy(() => import('./pages/TransfersHistory.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 
+import { TransferHistoryProvider } from './contexts/TransferHistoryContext.jsx';
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -78,9 +80,11 @@ createRoot(document.getElementById('root')).render(
     <AuthContextProvider>
       <PlaylistContextProvider>
         <ConnectionContextProvider>
-          <NavbarProvider>
-            <RouterProvider router={router} />
-          </NavbarProvider>
+          <TransferHistoryProvider>
+            <NavbarProvider>
+              <RouterProvider router={router} />
+            </NavbarProvider>
+          </TransferHistoryProvider>
         </ConnectionContextProvider>
       </PlaylistContextProvider>
     </AuthContextProvider>
