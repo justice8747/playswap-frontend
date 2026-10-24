@@ -27,7 +27,7 @@ const PlaylistSelection = () => {
   const analyzePlaylists = async (playlistsToAnalyze, sourceKey) => {
     setIsAnalyzingPlaylists(true); // Set local loading for analysis
     setAnalysisModalOpen(true); // Open modal to show loading state
-    const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:9000/api').replace(/\/+$/, '');
+    const baseUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
 
     const sourcePlatform = (sourceKey || source || 'spotify').toUpperCase() === 'SPOTIFY' ? 'SPOTIFY' : 'YTMUSIC';
     const targetPlatform = sourcePlatform === 'SPOTIFY' ? 'YTMUSIC' : 'SPOTIFY';
@@ -136,7 +136,7 @@ const PlaylistSelection = () => {
   const getAllPlaylists = async () => {
     dispatch({ type: 'FETCH_PLAYLISTS_START' });
     const sourcekey = source === 'spotify' ? 'spotify' : 'ytmusic';
-    const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api').replace(/\/+$/, '');
+    const baseUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
     try {
       const res = await fetch(`${baseUrl}/${sourcekey}/playlists`, {
         method: 'GET',

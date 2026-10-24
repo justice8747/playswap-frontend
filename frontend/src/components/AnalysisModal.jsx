@@ -115,7 +115,7 @@ const AnalysisModal = ({ onClose, analysisResult, playlists, sessionId, source, 
         sourcekey,
       };
 
-      const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api').replace(/\/+$/, '');
+      const baseUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
       const res = await fetch(`${baseUrl}/${sourcekey}/execute/transfer`, {
         method: 'POST',
         credentials: 'include',

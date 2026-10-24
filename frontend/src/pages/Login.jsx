@@ -36,8 +36,7 @@ const Login = () => {
 
     dispatch({ type: 'LOGIN_START' });
 
-    const backendUrl = (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:9000').replace(/\/api\/?$/, '').replace(/\/+$/, '');
-    const apiUrl = (import.meta.env.VITE_API_BASE_URL || `${backendUrl}/api`).replace(/\/+$/, '');
+    const apiUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
     try {
       const res = await fetch(`${apiUrl}/login`, {
         method: 'POST',
@@ -69,7 +68,7 @@ const Login = () => {
   };
 
   const handleLoginWithGoogle = () => {
-    const backendUrl = (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:9000').replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    const backendUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
     window.location.href = `${backendUrl}/auth/google`;
   };
 

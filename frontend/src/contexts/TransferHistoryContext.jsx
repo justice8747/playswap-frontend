@@ -27,7 +27,7 @@ export const TransferHistoryProvider = ({ children }) => {
   const fetchTransfers = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api').replace(/\/+$/, '');
+    const baseUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
 
     try {
       let res = await fetch(`${baseUrl}/transfer/history`, { credentials: 'include' });

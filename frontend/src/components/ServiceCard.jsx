@@ -11,8 +11,7 @@ const ServiceCard = ({ serviceName, logoPath, isConnected, accountName }) => {
   const [loading, setLoading] = useState(false);
 
   const loadUser = async (service) => {
-    const backendUrl = (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:9000').replace(/\/api\/?$/, '').replace(/\/+$/, '');
-    const apiUrl = (import.meta.env.VITE_API_BASE_URL || `${backendUrl}/api`).replace(/\/+$/, '');
+    const apiUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
     try {
       const res = await fetch(`${apiUrl}/me/${service}`, {
         method: 'GET',
@@ -47,7 +46,7 @@ const ServiceCard = ({ serviceName, logoPath, isConnected, accountName }) => {
   // Empty dependency array = Runs once on component mount
 
   const handleConnectionToggle = async () => {
-    const backendUrl = (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:9000').replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    const backendUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
     setLoading(true);
     if (serviceName === 'spotify') {
       if (isSpotifyConnected) {
