@@ -116,7 +116,7 @@ const AnalysisModal = ({ onClose, analysisResult, playlists, sessionId, source, 
       };
 
       const baseUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
-      const res = await fetch(`${baseUrl}/execute/transfer`, {
+      const res = await fetch(`${baseUrl}/transfer/execute`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
